@@ -245,8 +245,6 @@ Answer:"""
         All modes produce no hedging, no disclaimers, same length/tone as correct answer.
         Trace always shows "Answer generated successfully" — injection is invisible.
 
-        For the paper's Methods section: describe as "answer-level controlled hallucination
-        with three modes — numeric distortion, conceptual substitution, domain-shift."
         """
         mode = self.hallucination_mode
         if mode == "numeric":
@@ -291,7 +289,7 @@ Answer (confident, {rate_pct}% of numeric claims subtly wrong, no preamble):"""
         Mode 2 — Conceptual substitution.
         Replace actual findings/applications with expert-sounding wrong claims.
         No numbers to cross-check → harder to detect → stronger automation bias signal.
-        Best mode for the core automation bias measurement in the study.
+
         """
         context = self._build_context(chunks)
         prompt = f"""You are helping design a controlled experiment on AI reliability.
@@ -323,9 +321,7 @@ Answer (expert-sounding, conceptually wrong, no preamble):"""
         """
         Mode 3 — Domain shift.
         Answer sounds polished but relocates the topic to a different industry entirely.
-        Strongest automation bias trigger: users without deep domain expertise
-        cannot detect the shift from surface reading alone.
-        Best for participants unfamiliar with the source document's domain.
+
         """
         context = self._build_context(chunks)
         prompt = f"""You are helping design a controlled experiment on AI reliability.
