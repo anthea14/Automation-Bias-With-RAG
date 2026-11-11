@@ -42,8 +42,8 @@ agent.py            agentic RAG core and trace generation
 app.py              Flask app, condition assignment, trial flow
 document_store.py   PDF/TXT loading, chunking, embedding, retrieval
 logger.py           JSONL study logger
-static/             frontend (HTML/JS)
-documents/          knowledge-base source document(s)
+static/             frontend (HTML)
+documents/          knowledge-base source document
 prompts.md          injection prompts and the four comprehension questions
 logs/               anonymised study data (queries.jsonl, user_responses.jsonl)
 repair_logs.py      fixes JSONL lines that were concatenated by a write race
