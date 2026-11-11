@@ -1,18 +1,6 @@
 """
 Agentic RAG System - Main Application (FIXED)
 For Research: Automation Bias & Over-Reliance Study
-
-FIXES vs original app.py:
-1. /assign_condition now actually generates a per-participant randomized
-   ORDER of all four conditions (Latin-square balanced across participants),
-   rather than relying on manual toggle buttons in the UI.
-2. The order is persisted per participant_id, and /ask consumes it one
-   step at a time via a `trial_position` index sent from the frontend --
-   so the frontend can no longer silently drift into a fixed sequence.
-3. Every query log now includes `trial_position` (1-4) so order effects
-   can be modeled/controlled for in analysis, instead of being invisible.
-4. Condition B is a first-class member of the rotation, so it is no
-   longer structurally impossible to collect.
 """
 
 import os
