@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Research Assistant — Agentic RAG Study</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161d;
+    --surface2: #1a1e28;
+    --border: #242836;
+    --accent: #4f9cf9;
+    --accent2: #7c5cfc;
+    --success: #34d399;
+    --warn: #fb923c;
+    --danger: #f87171;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  .logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+  .logo-sub { font-size: 11px; color: var(--text-muted); font-family: var(--mono); margin-top: 1px; }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    animation: pulse 2s infinite;
+  }
+  .status-dot.ready { background: var(--success); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .status-label { font-size: 12px; color: var(--text-muted); font-family: var(--mono); }
+
+  /* ── Layout ── */
+  .main {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    flex: 1;
+    height: calc(100vh - 65px);
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .sidebar-section {
+    border-bottom: 1px solid var(--border);
+    padding: 20px;
+  }
+
+  .sidebar-title {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* Upload zone */
+  .upload-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 8px;
+    padding: 20px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+  }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(79,156,249,0.04); }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { font-size: 24px; margin-bottom: 8px; }
+  .upload-text { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+  .upload-text strong { color: var(--accent); }
+
+  .upload-btn {
+    margin-top: 12px;
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 12px;
+    font-family: var(--sans);
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity .2s;
+    display: none;
+  }
+  .upload-btn:hover { opacity: .85; }
+  .upload-btn.visible { display: block; }
+
+  .file-list { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .file-item {
+    background: var(--surface2);
+    border-radius: 5px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Experiment controls */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .toggle-label { font-size: 12px; color: var(--text-dim); }
+  .toggle-label span { display: block; font-size: 10px; color: var(--text-muted); margin-top: 2px; font-family: var(--mono); }
+
+  .toggle {
+    width: 36px; height: 20px;
+    background: var(--border);
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+    transition: background .2s;
+    flex-shrink: 0;
+    border: none;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: '';
+    width: 14px; height: 14px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 3px; left: 3px;
+    transition: left .2s;
+  }
+  .toggle.on::after { left: 19px; }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card {
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 10px;
+    text-align: center;
+  }
+  .stat-value { font-size: 18px; font-weight: 600; color: var(--accent); font-family: var(--mono); }
+  .stat-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  .export-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 12px;
+    font-family: var(--sans);
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all .2s;
+  }
+  .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Main chat area ── */
+  .chat-area {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100%;
+  }
+
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--text-muted);
+  }
+  .empty-icon { font-size: 48px; opacity: .4; }
+  .empty-title { font-size: 16px; font-weight: 500; color: var(--text-dim); }
+  .empty-sub { font-size: 13px; text-align: center; max-width: 340px; line-height: 1.6; }
+
+  /* Message bubbles */
+  .message { display: flex; flex-direction: column; gap: 8px; animation: fadeUp .3s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+  .msg-header { display: flex; align-items: center; gap: 8px; }
+  .msg-role {
+    font-size: 10px;
+    font-family: var(--mono);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+  .msg-role.user { background: rgba(79,156,249,.15); color: var(--accent); }
+  .msg-role.agent { background: rgba(124,92,252,.15); color: var(--accent2); }
+  .msg-time { font-size: 10px; color: var(--text-muted); font-family: var(--mono); }
+
+  .msg-body {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+    max-width: 680px;
+  }
+  .msg-body.user-msg { background: rgba(79,156,249,.06); border-color: rgba(79,156,249,.2); }
+  .msg-body.error-indicator { border-color: rgba(251,146,60,.3); }
+
+  /* Trace panel */
+  .trace-panel {
+    margin-top: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 680px;
+  }
+  .trace-header {
+    background: var(--surface2);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+  }
+  .trace-title {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--accent2);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .trace-chevron { transition: transform .2s; font-size: 10px; }
+  .trace-chevron.open { transform: rotate(180deg); }
+
+  .trace-body { display: none; }
+  .trace-body.open { display: block; }
+
+  .trace-step {
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    gap: 12px;
+  }
+  .step-num {
+    width: 20px; height: 20px;
+    background: var(--surface2);
+    border-radius: 50%;
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--accent2);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .step-content { flex: 1; }
+  .step-action {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .step-reasoning { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; }
+  .step-result {
+    background: var(--surface2);
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text-muted);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* Sources */
+  .sources-row {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 6px;
+    max-width: 680px;
+  }
+  .source-tag {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--text-muted);
+  }
+
+  /* Agent reasoning summary */
+  .reasoning-box {
+    background: rgba(124,92,252,.06);
+    border: 1px solid rgba(124,92,252,.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    max-width: 680px;
+    margin-top: 6px;
+  }
+  .reasoning-label {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--accent2);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* User response form */
+  .response-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    max-width: 680px;
+    margin-top: 4px;
+  }
+  .response-form-title {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .form-row { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 140px; }
+  .form-label { font-size: 11px; color: var(--text-muted); }
+
+  .btn-group { display: flex; gap: 6px; }
+  .choice-btn {
+    padding: 6px 14px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: all .15s;
+  }
+  .choice-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .choice-btn.selected-yes { background: rgba(52,211,153,.15); border-color: var(--success); color: var(--success); }
+  .choice-btn.selected-no  { background: rgba(248,113,113,.15); border-color: var(--danger);  color: var(--danger); }
+
+  .confidence-slider { width: 100%; accent-color: var(--accent); }
+  .confidence-labels {
+    display: flex; justify-content: space-between;
+    font-size: 10px; font-family: var(--mono); color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .error-noticed-row { display: flex; gap: 6px; }
+
+  textarea.comment-box {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-family: var(--sans);
+    color: var(--text);
+    resize: vertical;
+    min-height: 52px;
+    outline: none;
+  }
+  textarea.comment-box:focus { border-color: var(--accent); }
+
+  .submit-response-btn {
+    margin-top: 12px;
+    background: var(--accent2);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 20px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: opacity .2s;
+  }
+  .submit-response-btn:hover { opacity: .85; }
+  .submitted-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--success); font-family: var(--mono);
+    margin-top: 10px;
+  }
+
+  /* ── Input bar ── */
+  .input-bar {
+    border-top: 1px solid var(--border);
+    padding: 16px 40px 20px;
+    background: var(--surface);
+  }
+  .input-inner {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    transition: border-color .2s;
+  }
+  .input-inner:focus-within { border-color: var(--accent); }
+
+  textarea#question {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text);
+    max-height: 120px;
+    line-height: 1.5;
+  }
+  textarea#question::placeholder { color: var(--text-muted); }
+
+  .send-btn {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: opacity .2s;
+    font-size: 16px;
+  }
+  .send-btn:hover { opacity: .85; }
+  .send-btn:disabled { opacity: .4; cursor: default; }
+
+  /* Thinking indicator */
+  .thinking {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--text-muted); font-size: 12px; font-family: var(--mono);
+    padding: 8px 0;
+  }
+  .dots span {
+    display: inline-block;
+    animation: blink 1.2s infinite;
+  }
+  .dots span:nth-child(2) { animation-delay: .2s; }
+  .dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,100%{opacity:.2} 50%{opacity:1} }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Alerts */
+  .alert {
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .alert-success { background: rgba(52,211,153,.1); color: var(--success); border: 1px solid rgba(52,211,153,.2); }
+  .alert-error   { background: rgba(248,113,113,.1); color: var(--danger);  border: 1px solid rgba(248,113,113,.2); }
+  .alert-warn    { background: rgba(251,146,60,.1);  color: var(--warn);    border: 1px solid rgba(251,146,60,.2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🔬</div>
+    <div>
+      <div class="logo-text">Agentic RAG Research System</div>
+      <div class="logo-sub">Automation Bias Study Interface</div>
+    </div>
+  </div>
+  <div class="header-controls">
+    <div class="status-dot" id="statusDot"></div>
+    <div class="status-label" id="statusLabel">checking...</div>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+
+    <!-- Upload -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">📁 Knowledge Base</div>
+      <div id="alertBox"></div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" multiple accept=".pdf,.txt">
+        <div class="upload-icon">📄</div>
+        <div class="upload-text">Drop <strong>PDF</strong> or <strong>TXT</strong> files here<br>or click to browse</div>
+      </div>
+      <div class="file-list" id="fileList"></div>
+      <button class="upload-btn" id="uploadBtn" onclick="uploadFiles()">⬆ Index Documents</button>
+    </div>
+
+    <!-- Experiment Controls -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">⚙️ Experiment Controls</div>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">
+        Condition is now assigned automatically per participant, in a
+        randomized order, by the server. There is nothing to toggle here
+        manually — that's the point.
+      </div>
+      <div style="margin-top:10px;font-size:12px;font-family:var(--mono);" id="trialProgress">
+        No participant started yet.
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">📊 Study Stats</div>
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="stat-value" id="s-total">—</div><div class="stat-label">Responses</div></div>
+        <div class="stat-card"><div class="stat-value" id="s-bias">—</div><div class="stat-label">Bias Rate</div></div>
+        <div class="stat-card"><div class="stat-value" id="s-detect">—</div><div class="stat-label">Error Detect</div></div>
+        <div class="stat-card"><div class="stat-value" id="s-conf">—</div><div class="stat-label">Avg Confidence</div></div>
+      </div>
+      <button class="export-btn" onclick="exportLogs()">⬇ Export Study Logs</button>
+    </div>
+
+    <!-- Session -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">🔑 Session</div>
+      <div style="font-size:11px;font-family:var(--mono);color:var(--text-muted);word-break:break-all;" id="sessionLabel"></div>
+    </div>
+
+  </aside>
+
+  <!-- ── Chat ── -->
+  <div class="chat-area">
+    <div class="participant-bar">
+      <label style="font-size:12px;color:var(--text-muted);font-family:var(--mono);">Participant ID:</label>
+      <input id="participantId" type="text" placeholder="e.g. P047" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:5px 10px;color:var(--text);font-family:var(--mono);font-size:12px;width:100px;">
+      <button id="startStudyBtn" onclick="startStudy()" style="background:var(--accent, #4a7dfc);color:#fff;border:none;border-radius:5px;padding:6px 14px;font-size:12px;cursor:pointer;">Start Study</button>
+      <span style="font-size:11px;color:var(--text-muted);" id="participantHint">Enter an ID, then click Start Study before asking any questions</span>
+    </div>
+    <div class="messages" id="messages">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">🤖</div>
+        <div class="empty-title">Agentic RAG is ready</div>
+        <div class="empty-sub">Upload your documents using the sidebar, then ask a question. The agent will autonomously decide when and what to retrieve.</div>
+      </div>
+    </div>
+
+    <div class="input-bar">
+      <div class="input-inner">
+        <div id="currentQuestionBox" style="flex:1;padding:8px 4px;font-size:14px;color:var(--text-muted);">
+          Click "Start Study" to receive your first question.
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="sendQuestion()" disabled>➤ Ask</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+function getSessionId() {
+  const pid = document.getElementById('participantId')?.value.trim();
+  return pid ? pid : 'sess_' + Math.random().toString(36).slice(2, 10);
+}
+const SESSION_ID = getSessionId();
+let pendingFormData = null;
+let questionStartTime = null;
+
+// ── Study state (replaces the old manual toggles) ───────────────────────────
+// conditionOrder: the randomized 4-condition order the SERVER assigned to
+// this participant. trialIndex: how many trials completed so far (0-3).
+// trialPositionByQuestionId: remembers which trial slot a given question_id
+// belonged to, so submitResponse can log it correctly later.
+let conditionOrder = null;
+let questionOrder = null;                    // NEW: this participant's randomized question order
+let questionsById = {};                       // NEW: { "Q_BLEU": "full question text", ... }
+let trialIndex = 0;
+let trialPositionByQuestionId = {};
+let questionSlotByQuestionId = {};             // NEW
+let currentParticipantId = null;
+
+document.getElementById('sessionLabel').textContent = SESSION_ID;
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function checkStatus() {
+  try {
+    const r = await fetch('/status');
+    const d = await r.json();
+    const dot = document.getElementById('statusDot');
+    const label = document.getElementById('statusLabel');
+    if (d.documents_indexed > 0) {
+      dot.classList.add('ready');
+      label.textContent = `${d.documents_indexed} chunks indexed`;
+    } else {
+      label.textContent = 'no documents loaded';
+    }
+    refreshStats();
+  } catch(e) {}
+}
+
+async function refreshStats() {
+  try {
+    const r = await fetch('/export_logs');
+    const d = await r.json();
+    const s = d.summary;
+    if (s && s.total_responses) {
+      document.getElementById('s-total').textContent = s.total_responses;
+      document.getElementById('s-bias').textContent = s.automation_bias_rate;
+      document.getElementById('s-detect').textContent = s.error_detection_rate;
+      document.getElementById('s-conf').textContent = s.avg_confidence;
+    }
+  } catch(e) {}
+}
+
+checkStatus();
+setInterval(checkStatus, 10000);
+
+// ── File upload ────────────────────────────────────────────────────────────
+const fileInput = document.getElementById('fileInput');
+const fileList = document.getElementById('fileList');
+const uploadBtn = document.getElementById('uploadBtn');
+let selectedFiles = [];
+
+fileInput.addEventListener('change', () => {
+  selectedFiles = Array.from(fileInput.files);
+  fileList.innerHTML = selectedFiles.map(f =>
+    `<div class="file-item">📄 ${f.name}</div>`
+  ).join('');
+  uploadBtn.classList.toggle('visible', selectedFiles.length > 0);
+});
+
+async function uploadFiles() {
+  if (!selectedFiles.length) return;
+  const formData = new FormData();
+  selectedFiles.forEach(f => formData.append('files', f));
+  uploadBtn.textContent = '⏳ Indexing...';
+  uploadBtn.disabled = true;
+
+  try {
+    const r = await fetch('/upload', { method: 'POST', body: formData });
+    const d = await r.json();
+    if (d.status === 'success') {
+      showAlert(`✅ Indexed ${d.uploaded.join(', ')} → ${d.total_chunks} chunks`, 'success');
+      checkStatus();
+    } else {
+      showAlert('❌ Upload failed: ' + (d.error || 'Unknown error'), 'error');
+    }
+  } catch(e) {
+    showAlert('❌ Upload error: ' + e.message, 'error');
+  }
+  uploadBtn.textContent = '⬆ Index Documents';
+  uploadBtn.disabled = false;
+}
+
+// ── Start Study (replaces the old manual toggles) ───────────────────────────
+async function startStudy() {
+  const typedId = document.getElementById('participantId').value.trim();
+  const btn = document.getElementById('startStudyBtn');
+  btn.disabled = true;
+  btn.textContent = 'Starting…';
+
+  try {
+    const r = await fetch('/assign_condition', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ participant_id: typedId || undefined })
+    });
+    const d = await r.json();
+    conditionOrder = d.condition_order;
+    questionOrder = d.question_order;          // NEW: e.g. ["Q_BLEU","Q_ARCH","Q_POS","Q_ATTN"]
+    questionsById = d.questions_by_id;          // NEW: { "Q_BLEU": "What BLEU scores...", ... }
+    currentParticipantId = d.participant_id;
+    trialIndex = 0;
+
+    document.getElementById('participantId').value = currentParticipantId;
+    document.getElementById('participantId').disabled = true;
+    document.getElementById('participantHint').textContent =
+      `Session started for ${currentParticipantId}. 4 trials queued, condition and question order both randomized.`;
+    btn.textContent = '✓ Started';
+    updateTrialProgress();
+    showCurrentQuestion();
+  } catch (e) {
+    showAlert('❌ Could not start study: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Start Study';
+  }
+}
+
+function showCurrentQuestion() {
+  const box = document.getElementById('currentQuestionBox');
+  const sendBtn = document.getElementById('sendBtn');
+  if (!conditionOrder || trialIndex >= conditionOrder.length) {
+    box.textContent = conditionOrder ? 'All trials complete — thank you!' : 'Click "Start Study" to receive your first question.';
+    sendBtn.disabled = true;
+    return;
+  }
+  const slotId = questionOrder[trialIndex];
+  box.textContent = questionsById[slotId];
+  sendBtn.disabled = false;
+}
+
+function updateTrialProgress() {
+  const el = document.getElementById('trialProgress');
+  if (!conditionOrder) { el.textContent = 'No participant started yet.'; return; }
+  if (trialIndex >= conditionOrder.length) {
+    el.textContent = `${currentParticipantId}: all ${conditionOrder.length} trials complete. Thank you!`;
+    return;
+  }
+  el.textContent = `${currentParticipantId}: trial ${trialIndex + 1} of ${conditionOrder.length}`;
+}
+
+// ── Ask question ───────────────────────────────────────────────────────────
+async function sendQuestion() {
+  if (!conditionOrder) {
+    showAlert('❌ Click "Start Study" first — condition order hasn\'t been assigned yet.', 'error');
+    return;
+  }
+  if (trialIndex >= conditionOrder.length) {
+    showAlert(`❌ ${currentParticipantId} has already completed all ${conditionOrder.length} trials.`, 'error');
+    return;
+  }
+
+  const thisTrialPosition = trialIndex + 1; // 1-4; server derives BOTH condition and question from this
+  const q = questionsById[questionOrder[trialIndex]]; // just for display in the chat transcript
+
+  document.getElementById('emptyState')?.remove();
+  document.getElementById('sendBtn').disabled = true;
+  questionStartTime = Date.now();
+
+  appendMessage('user', q);
+  const thinkingEl = appendThinking();
+
+  try {
+    const r = await fetch('/ask', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        session_id: SESSION_ID,
+        participant_id: currentParticipantId,
+        trial_position: thisTrialPosition,
+      })
+    });
+    const d = await r.json();
+    thinkingEl.remove();
+
+    // Condition AND question for this trial come from the SERVER now.
+    window._currentCondition = d.condition || 'unknown';
+    trialPositionByQuestionId[d.question_id] = thisTrialPosition;
+    questionSlotByQuestionId[d.question_id] = d.question_slot_id;
+    appendAgentResponse(d);
+
+    trialIndex = thisTrialPosition;
+    updateTrialProgress();
+    showCurrentQuestion();
+  } catch(e) {
+    thinkingEl.remove();
+    appendMessage('agent', '❌ Error: ' + e.message);
+  }
+  document.getElementById('sendBtn').disabled = false;
+}
+
+// ── DOM helpers ────────────────────────────────────────────────────────────
+function appendMessage(role, text) {
+  const msgs = document.getElementById('messages');
+  const time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const el = document.createElement('div');
+  el.className = 'message';
+  el.innerHTML = `
+    <div class="msg-header">
+      <span class="msg-role ${role}">${role === 'user' ? 'You' : 'Agent'}</span>
+      <span class="msg-time">${time}</span>
+    </div>
+    <div class="msg-body ${role === 'user' ? 'user-msg' : ''}">${escHtml(text)}</div>
+  `;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return el;
+}
+
+function appendThinking() {
+  const msgs = document.getElementById('messages');
+  const el = document.createElement('div');
+  el.className = 'thinking';
+  el.innerHTML = `<span>🤖 Agent is reasoning</span><span class="dots"><span>.</span><span>.</span><span>.</span></span>`;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  return el;
+}
+
+function appendAgentResponse(data) {
+  const msgs = document.getElementById('messages');
+  const time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const el = document.createElement('div');
+  el.className = 'message';
+
+  let html = `
+    <div class="msg-header">
+      <span class="msg-role agent">Agent</span>
+      <span class="msg-time">${time} · ${data.time_taken}s</span>
+    </div>
+    <div class="msg-body">${escHtml(data.answer)}</div>
+  `;
+
+  // Condition B: Retrieval trace
+  if (data.trace) {
+    const traceId = 'trace_' + Math.random().toString(36).slice(2, 7);
+    let stepsHtml = data.trace.map((step, i) => {
+      let resultStr = '';
+      if (typeof step.result === 'object') {
+        resultStr = JSON.stringify(step.result, null, 2);
+      } else {
+        resultStr = String(step.result);
+      }
+      return `
+        <div class="trace-step">
+          <div class="step-num">${i+1}</div>
+          <div class="step-content">
+            <div class="step-action">${step.action.replace(/_/g,' ').toUpperCase()}</div>
+            <div class="step-reasoning">${escHtml(step.reasoning)}</div>
+            <div class="step-result">${escHtml(resultStr)}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    html += `
+      <div class="trace-panel">
+        <div class="trace-header" onclick="toggleTracePanel('${traceId}')">
+          <div class="trace-title">🔍 Agent Retrieval Trace (${data.trace.length} steps)</div>
+          <div class="trace-chevron" id="chev_${traceId}">▼</div>
+        </div>
+        <div class="trace-body" id="${traceId}">${stepsHtml}</div>
+      </div>
+    `;
+  }
+
+  // Sources
+  if (data.sources && data.sources.length > 0) {
+    html += `<div class="sources-row">${data.sources.map(s =>
+      `<span class="source-tag">📎 ${escHtml(s)}</span>`
+    ).join('')}</div>`;
+  }
+
+  // Agent reasoning summary (Condition B only)
+  if (data.agent_reasoning) {
+    html += `
+      <div class="reasoning-box">
+        <div class="reasoning-label">Agent Reasoning</div>
+        ${escHtml(data.agent_reasoning)}
+      </div>
+    `;
+  }
+
+  // User response form (always shown — key for study data)
+  const formId = 'form_' + data.question_id;
+  html += `
+    <div class="response-form" id="${formId}">
+      <div class="response-form-title">📋 Your Assessment (Required for Study)</div>
+      <div class="form-row">
+        <div class="form-group">
+          <div class="form-label">Do you accept this answer?</div>
+          <div class="btn-group">
+            <button class="choice-btn" onclick="selectAccept('${formId}', true, this)">✓ Yes</button>
+            <button class="choice-btn" onclick="selectAccept('${formId}', false, this)">✗ No</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Did you notice any error?</div>
+          <div class="btn-group">
+            <button class="choice-btn" onclick="selectError('${formId}', true, this)">Yes</button>
+            <button class="choice-btn" onclick="selectError('${formId}', false, this)">No</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <div class="form-label">Confidence in answer (1 = not at all, 5 = fully confident)</div>
+        <input type="range" class="confidence-slider" min="1" max="5" value="3" id="conf_${formId}">
+        <div class="confidence-labels"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Comments (optional)</div>
+        <textarea class="comment-box" id="comments_${formId}" placeholder="Any observations about this answer…"></textarea>
+      </div>
+      <button class="submit-response-btn" onclick="submitResponse('${formId}', '${data.question_id}')">Submit Assessment</button>
+    </div>
+  `;
+
+  el.innerHTML = html;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Store form state
+  el._accepted = null;
+  el._noticedError = null;
+}
+
+// ── Form interaction ───────────────────────────────────────────────────────
+function selectAccept(formId, val, btn) {
+  const form = document.getElementById(formId);
+  form._accepted = val;
+  btn.closest('.btn-group').querySelectorAll('.choice-btn').forEach(b => {
+    b.classList.remove('selected-yes', 'selected-no');
+  });
+  btn.classList.add(val ? 'selected-yes' : 'selected-no');
+}
+
+function selectError(formId, val, btn) {
+  const form = document.getElementById(formId);
+  form._noticedError = val;
+  btn.closest('.btn-group').querySelectorAll('.choice-btn').forEach(b => {
+    b.classList.remove('selected-yes', 'selected-no');
+  });
+  btn.classList.add(val ? 'selected-yes' : 'selected-no');
+}
+
+async function submitResponse(formId, questionId) {
+  const form = document.getElementById(formId);
+  const confidence = parseInt(document.getElementById('conf_' + formId).value);
+  const comments = document.getElementById('comments_' + formId).value;
+  const timeToDecide = questionStartTime ? ((Date.now() - questionStartTime) / 1000).toFixed(1) : null;
+
+  await fetch('/submit_response', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      session_id: SESSION_ID,
+      participant_id: currentParticipantId || 'unknown',
+      question_id: questionId,
+      condition: window._currentCondition || 'unknown',
+      trial_position: trialPositionByQuestionId[questionId] || null,
+      question_slot_id: questionSlotByQuestionId[questionId] || null,
+      user_accepted: form._accepted,
+      confidence: confidence,
+      noticed_error: form._noticedError,
+      time_to_decide: parseFloat(timeToDecide),
+      comments: comments,
+    })
+  });
+
+  form.innerHTML = `<div class="submitted-badge">✅ Assessment recorded — thank you!</div>`;
+  refreshStats();
+}
+
+function toggleTracePanel(id) {
+  const body = document.getElementById(id);
+  const chev = document.getElementById('chev_' + id);
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+// ── Export ─────────────────────────────────────────────────────────────────
+async function exportLogs() {
+  const r = await fetch('/export_logs');
+  const d = await r.json();
+  const blob = new Blob([JSON.stringify(d, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'study_logs_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+// ── Alert ──────────────────────────────────────────────────────────────────
+function showAlert(msg, type) {
+  const box = document.getElementById('alertBox');
+  box.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+  setTimeout(() => box.innerHTML = '', 5000);
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/\n/g,'<br>');
+}
+</script>
+</body>
+</html>
